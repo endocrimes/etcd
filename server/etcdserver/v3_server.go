@@ -44,10 +44,6 @@ const (
 	maxGapBetweenApplyAndCommitIndex = 5000
 	traceThreshold                   = 100 * time.Millisecond
 	readIndexRetryTime               = 500 * time.Millisecond
-
-	// The timeout for the node to catch up its applied index, and is used in
-	// lease related operations, such as LeaseRenew and LeaseTimeToLive.
-	applyTimeout = time.Second
 )
 
 type RaftKV interface {
@@ -276,18 +272,6 @@ func (s *EtcdServer) LeaseGrant(ctx context.Context, r *pb.LeaseGrantRequest) (*
 		return nil, err
 	}
 	return resp.(*pb.LeaseGrantResponse), nil
-}
-
-func (s *EtcdServer) waitAppliedIndex() error {
-	select {
-	case <-s.ApplyWait():
-	case <-s.stopping:
-		return ErrStopped
-	case <-time.After(applyTimeout):
-		return ErrTimeoutWaitAppliedIndex
-	}
-
-	return nil
 }
 
 func (s *EtcdServer) LeaseRevoke(ctx context.Context, r *pb.LeaseRevokeRequest) (*pb.LeaseRevokeResponse, error) {

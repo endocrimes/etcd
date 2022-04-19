@@ -390,13 +390,6 @@ func greaterOrEqual(first, second semver.Version) bool {
 // has expired, an error will be returned.
 func (le *lessor) Renew(id LeaseID) (int64, error) {
 	le.mu.RLock()
-	if !le.isPrimary() {
-		// forward renew request to primary instead of returning error.
-		le.mu.RUnlock()
-		return -1, ErrNotPrimary
-	}
-
-	demotec := le.demotec
 
 	l := le.leaseMap[id]
 	if l == nil {
@@ -414,10 +407,6 @@ func (le *lessor) Renew(id LeaseID) (int64, error) {
 		// deletion to complete.
 		case <-l.revokec:
 			return -1, ErrLeaseNotFound
-		// The expired lease might fail to be revoked if the primary changes.
-		// The caller will retry on ErrNotPrimary.
-		case <-demotec:
-			return -1, ErrNotPrimary
 		case <-le.stopC:
 			return -1, ErrNotPrimary
 		}
