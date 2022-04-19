@@ -73,7 +73,8 @@ type applierV3 interface {
 
 	LeaseGrant(lc *pb.LeaseGrantRequest) (*pb.LeaseGrantResponse, error)
 	LeaseRevoke(lc *pb.LeaseRevokeRequest) (*pb.LeaseRevokeResponse, error)
-
+	LeaseRenew(lc *pb.LeaseRenewRequest) (*pb.LeaseRenewResponse, error)
+	LeaseTimeToLive(lc *pb.LeaseTimeToLiveRequest) (*pb.LeaseTimeToLiveResponse, error)
 	LeaseCheckpoint(lc *pb.LeaseCheckpointRequest) (*pb.LeaseCheckpointResponse, error)
 
 	Alarm(*pb.AlarmRequest) (*pb.AlarmResponse, error)
@@ -189,6 +190,9 @@ func (a *applierV3backend) Apply(r *pb.InternalRaftRequest, shouldApplyV3 member
 	case r.LeaseCheckpoint != nil:
 		op = "LeaseCheckpoint"
 		ar.resp, ar.err = a.s.applyV3.LeaseCheckpoint(r.LeaseCheckpoint)
+	case r.LeaseRenew != nil:
+		op = "LeaseRenew"
+		ar.resp, ar.err = a.s.applyV3.LeaseRenew(r.LeaseRenew)
 	case r.Alarm != nil:
 		op = "Alarm"
 		ar.resp, ar.err = a.s.applyV3.Alarm(r.Alarm)
@@ -708,9 +712,22 @@ func (a *applierV3backend) LeaseGrant(lc *pb.LeaseGrantRequest) (*pb.LeaseGrantR
 	return resp, err
 }
 
+func (a *applierV3backend) LeaseRenew(lc *pb.LeaseRenewRequest) (*pb.LeaseRenewResponse, error) {
+	ttl, err := a.s.lessor.Renew(lease.LeaseID(lc.ID))
+	return &pb.LeaseRenewResponse{Header: newHeader(a.s), TTL: ttl}, err
+}
+
 func (a *applierV3backend) LeaseRevoke(lc *pb.LeaseRevokeRequest) (*pb.LeaseRevokeResponse, error) {
 	err := a.s.lessor.Revoke(lease.LeaseID(lc.ID))
 	return &pb.LeaseRevokeResponse{Header: newHeader(a.s)}, err
+}
+
+func (a *applierV3backend) LeaseTimeToLive(lc *pb.LeaseTimeToLiveRequest) (*pb.LeaseTimeToLiveResponse, error) {
+	le := a.s.lessor.Lookup(lease.LeaseID(lc.ID))
+	if le == nil {
+		return nil, lease.ErrLeaseNotFound
+	}
+	return &pb.LeaseTimeToLiveResponse{Header: newHeader(a.s), ID: int64(le.ID), TTL: int64(le.Remaining().Seconds()), GrantedTTL: le.TTL()}, nil
 }
 
 func (a *applierV3backend) LeaseCheckpoint(lc *pb.LeaseCheckpointRequest) (*pb.LeaseCheckpointResponse, error) {

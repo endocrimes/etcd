@@ -29,7 +29,6 @@ import (
 	"go.etcd.io/etcd/server/v3/auth"
 	"go.etcd.io/etcd/server/v3/etcdserver/api/membership"
 	"go.etcd.io/etcd/server/v3/lease"
-	"go.etcd.io/etcd/server/v3/lease/leasehttp"
 	"go.etcd.io/etcd/server/v3/storage/mvcc"
 
 	"github.com/gogo/protobuf/proto"
@@ -300,94 +299,21 @@ func (s *EtcdServer) LeaseRevoke(ctx context.Context, r *pb.LeaseRevokeRequest) 
 }
 
 func (s *EtcdServer) LeaseRenew(ctx context.Context, id lease.LeaseID) (int64, error) {
-	if s.isLeader() {
-		if err := s.waitAppliedIndex(); err != nil {
-			return 0, err
-		}
-
-		ttl, err := s.lessor.Renew(id)
-		if err == nil { // already requested to primary lessor(leader)
-			return ttl, nil
-		}
-		if err != lease.ErrNotPrimary {
-			return -1, err
-		}
+	resp, err := s.raftRequestOnce(ctx, pb.InternalRaftRequest{LeaseRenew: &pb.LeaseRenewRequest{ID: int64(id)}})
+	if err != nil {
+		return -1, err
 	}
 
-	cctx, cancel := context.WithTimeout(ctx, s.Cfg.ReqTimeout())
-	defer cancel()
-
-	// renewals don't go through raft; forward to leader manually
-	for cctx.Err() == nil {
-		leader, lerr := s.waitLeader(cctx)
-		if lerr != nil {
-			return -1, lerr
-		}
-		for _, url := range leader.PeerURLs {
-			lurl := url + leasehttp.LeasePrefix
-			ttl, err := leasehttp.RenewHTTP(cctx, id, lurl, s.peerRt)
-			if err == nil || err == lease.ErrLeaseNotFound {
-				return ttl, err
-			}
-		}
-		// Throttle in case of e.g. connection problems.
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	if cctx.Err() == context.DeadlineExceeded {
-		return -1, ErrTimeout
-	}
-	return -1, ErrCanceled
+	return resp.(*pb.LeaseRenewResponse).TTL, nil
 }
 
 func (s *EtcdServer) LeaseTimeToLive(ctx context.Context, r *pb.LeaseTimeToLiveRequest) (*pb.LeaseTimeToLiveResponse, error) {
-	if s.isLeader() {
-		if err := s.waitAppliedIndex(); err != nil {
-			return nil, err
-		}
-		// primary; timetolive directly from leader
-		le := s.lessor.Lookup(lease.LeaseID(r.ID))
-		if le == nil {
-			return nil, lease.ErrLeaseNotFound
-		}
-		// TODO: fill out ResponseHeader
-		resp := &pb.LeaseTimeToLiveResponse{Header: &pb.ResponseHeader{}, ID: r.ID, TTL: int64(le.Remaining().Seconds()), GrantedTTL: le.TTL()}
-		if r.Keys {
-			ks := le.Keys()
-			kbs := make([][]byte, len(ks))
-			for i := range ks {
-				kbs[i] = []byte(ks[i])
-			}
-			resp.Keys = kbs
-		}
-		return resp, nil
+	err := s.linearizableReadNotify(ctx)
+	if err != nil {
+		return nil, err
 	}
 
-	cctx, cancel := context.WithTimeout(ctx, s.Cfg.ReqTimeout())
-	defer cancel()
-
-	// forward to leader
-	for cctx.Err() == nil {
-		leader, err := s.waitLeader(cctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, url := range leader.PeerURLs {
-			lurl := url + leasehttp.LeaseInternalPrefix
-			resp, err := leasehttp.TimeToLiveHTTP(cctx, lease.LeaseID(r.ID), r.Keys, lurl, s.peerRt)
-			if err == nil {
-				return resp.LeaseTimeToLiveResponse, nil
-			}
-			if err == lease.ErrLeaseNotFound {
-				return nil, err
-			}
-		}
-	}
-
-	if cctx.Err() == context.DeadlineExceeded {
-		return nil, ErrTimeout
-	}
-	return nil, ErrCanceled
+	return s.applyV3Base.LeaseTimeToLive(r)
 }
 
 func (s *EtcdServer) LeaseLeases(ctx context.Context, r *pb.LeaseLeasesRequest) (*pb.LeaseLeasesResponse, error) {
