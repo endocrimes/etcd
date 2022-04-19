@@ -836,39 +836,6 @@
         }
       }
     },
-    "/v3/kv/lease/renew": {
-      "post": {
-        "tags": [
-          "Lease"
-        ],
-        "summary": "LeaseRenew renews a lease.",
-        "operationId": "Lease_LeaseRenew2",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/etcdserverpbLeaseRenewRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/etcdserverpbLeaseRenewResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/runtimeError"
-            }
-          }
-        }
-      }
-    },
     "/v3/kv/lease/revoke": {
       "post": {
         "tags": [
@@ -1132,39 +1099,6 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/etcdserverpbLeaseLeasesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/runtimeError"
-            }
-          }
-        }
-      }
-    },
-    "/v3/lease/renew": {
-      "post": {
-        "tags": [
-          "Lease"
-        ],
-        "summary": "LeaseRenew renews a lease.",
-        "operationId": "Lease_LeaseRenew",
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/etcdserverpbLeaseRenewRequest"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/etcdserverpbLeaseRenewResponse"
             }
           },
           "default": {
@@ -2288,29 +2222,6 @@
           "items": {
             "$ref": "#/definitions/etcdserverpbLeaseStatus"
           }
-        }
-      }
-    },
-    "etcdserverpbLeaseRenewRequest": {
-      "type": "object",
-      "properties": {
-        "ID": {
-          "description": "ID is the lease ID to renew.",
-          "type": "string",
-          "format": "int64"
-        }
-      }
-    },
-    "etcdserverpbLeaseRenewResponse": {
-      "type": "object",
-      "properties": {
-        "TTL": {
-          "description": "TTL is the remaining TTL in seconds for the lease; the lease will expire in under TTL+1 seconds.",
-          "type": "string",
-          "format": "int64"
-        },
-        "header": {
-          "$ref": "#/definitions/etcdserverpbResponseHeader"
         }
       }
     },
