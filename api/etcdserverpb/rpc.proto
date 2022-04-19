@@ -100,19 +100,6 @@ service Lease {
     };
   }
 
-  // LeaseRenew renews a lease.
-  rpc LeaseRenew(LeaseRenewRequest) returns (LeaseRenewResponse) {
-      option (google.api.http) = {
-        post: "/v3/lease/renew"
-        body: "*"
-        additional_bindings {
-            post: "/v3/kv/lease/renew"
-            body: "*"
-        }
-    };
-  }
-
-
   // LeaseKeepAlive keeps the lease alive by streaming keep alive requests from the client
   // to the server and streaming keep alive responses from the server to the client.
   rpc LeaseKeepAlive(stream LeaseKeepAliveRequest) returns (stream LeaseKeepAliveResponse) {
