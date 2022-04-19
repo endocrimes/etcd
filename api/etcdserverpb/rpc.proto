@@ -100,6 +100,19 @@ service Lease {
     };
   }
 
+  // LeaseRenew renews a lease.
+  rpc LeaseRenew(LeaseRenewRequest) returns (LeaseRenewResponse) {
+      option (google.api.http) = {
+        post: "/v3/lease/renew"
+        body: "*"
+        additional_bindings {
+            post: "/v3/kv/lease/renew"
+            body: "*"
+        }
+    };
+  }
+
+
   // LeaseKeepAlive keeps the lease alive by streaming keep alive requests from the client
   // to the server and streaming keep alive responses from the server to the client.
   rpc LeaseKeepAlive(stream LeaseKeepAliveRequest) returns (stream LeaseKeepAliveResponse) {
@@ -865,6 +878,22 @@ message LeaseRevokeResponse {
   option (versionpb.etcd_version_msg) = "3.0";
 
   ResponseHeader header = 1;
+}
+
+message LeaseRenewRequest {
+  option (versionpb.etcd_version_msg) = "3.6";
+
+  // ID is the lease ID to renew.
+  int64 ID = 1;
+}
+
+message LeaseRenewResponse {
+  option (versionpb.etcd_version_msg) = "3.6";
+
+  ResponseHeader header = 1;
+
+  // TTL is the remaining TTL in seconds for the lease; the lease will expire in under TTL+1 seconds.
+  int64 TTL = 3;
 }
 
 message LeaseCheckpoint {

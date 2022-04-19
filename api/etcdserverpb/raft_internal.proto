@@ -45,6 +45,8 @@ message InternalRaftRequest {
 
   LeaseCheckpointRequest lease_checkpoint = 11 [(versionpb.etcd_version_field) = "3.4"];
 
+  LeaseRenewRequest lease_renew = 12 [(versionpb.etcd_version_field) = "3.6"];
+
   AuthEnableRequest auth_enable = 1000;
   AuthDisableRequest auth_disable = 1011;
   AuthStatusRequest auth_status = 1013 [(versionpb.etcd_version_field) = "3.5"];
