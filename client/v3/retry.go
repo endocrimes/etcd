@@ -144,6 +144,10 @@ func (rlc *retryLeaseClient) LeaseGrant(ctx context.Context, in *pb.LeaseGrantRe
 	return rlc.lc.LeaseGrant(ctx, in, append(opts, withRetryPolicy(repeatable))...)
 }
 
+func (rlc *retryLeaseClient) LeaseRenew(ctx context.Context, in *pb.LeaseRenewRequest, opts ...grpc.CallOption) (resp *pb.LeaseRenewResponse, err error) {
+	return rlc.lc.LeaseRenew(ctx, in, append(opts, withRetryPolicy(repeatable))...)
+}
+
 func (rlc *retryLeaseClient) LeaseRevoke(ctx context.Context, in *pb.LeaseRevokeRequest, opts ...grpc.CallOption) (resp *pb.LeaseRevokeResponse, err error) {
 	return rlc.lc.LeaseRevoke(ctx, in, append(opts, withRetryPolicy(repeatable))...)
 }
